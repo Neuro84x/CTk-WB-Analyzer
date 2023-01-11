@@ -1,0 +1,185 @@
+import os.path
+import customtkinter as ctk
+import tkinter as tk
+from tkinter import ttk
+import sys
+import math
+import subprocess
+import time
+import json
+import base64
+
+with open('settings.json', 'r', encoding='utf-8') as settings:
+    attributes = json.load(settings)
+    dateStock = attributes['dateStock']
+
+
+class Application(ctk.CTk):
+    def __init__(self):
+        ctk.CTk.__init__(self)
+        self.geometry('850x850')
+        self.title('Аналитика CUTECASELLC')
+        self.set_UI()
+
+    def set_UI(self):
+        # --------------------------------REFRESH----------------------------------------------------------------------#
+        self.refresh_button = ctk.CTkButton(self, text='Обновить', command=self.refresh)
+        self.refresh_button.grid()
+        self.refresh_label = ctk.CTkLabel(self, text="Обновление не запущено")
+        self.refresh_label.grid()
+
+        # --------------------------------STATUS-----------------------------------------------------------------------#
+        self.bar = ctk.CTkFrame(self)
+        self.bar.grid()
+
+        self.article_status_label = ctk.CTkLabel(self.bar, text='Статус')
+        self.article_status_label.grid()
+        self.article_status = ctk.CTkComboBox(self.bar, values=['Все', 'Критично', 'Внимание', 'Четко'],
+                                              state='readonly', text_color='Black', command=self.make_data_table)
+        self.article_status.set('Все')
+        self.article_status.grid()
+        # --------------------------------CALENDAR---------------------------------------------------------------------#
+        day = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
+               '20', '21', '22', '23', '24', '25', '26', '27',
+               '28', '29', '30', '31']
+
+        month = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
+        year = ['2021', '2022', '2023']
+
+        self.calendar = ctk.CTkFrame(self)
+        self.calendar.grid()
+
+        self.day_label = ctk.CTkLabel(self.calendar, text='Число')
+        self.day_label.grid(column=0, row=0)
+        self.day = ctk.CTkComboBox(master=self.calendar,
+                                   values=day, state='readonly', justify=ctk.LEFT, text_color='Black')
+        self.day.set('1')
+        self.day.grid(column=0, row=1)
+
+        self.day_label = ctk.CTkLabel(self.calendar, text='Месяц')
+        self.day_label.grid(column=1, row=0)
+        self.month = ctk.CTkComboBox(self.calendar,
+                                     values=month, state='readonly', justify=ctk.CENTER, text_color='Black')
+        self.month.set('1')
+        self.month.grid(column=1, row=1)
+
+        self.day_label = ctk.CTkLabel(self.calendar, text='Год')
+        self.day_label.grid(column=2, row=0)
+        self.year = ctk.CTkComboBox(self.calendar,
+                                    values=year, state='readonly', justify=ctk.RIGHT, text_color='Black')
+        self.year.set('2023')
+        self.year.grid(column=2, row=1)
+
+        # ----------------------------------DATA-----------------------------------------------------------------------#
+        treestyle = ttk.Style()
+        treestyle.theme_use('default')
+        treestyle.configure("Treeview", rowheight=20, background=ctk.ThemeManager.theme["CTkFrame"]["fg_color"][1],
+                            foreground=ctk.ThemeManager.theme["CTkLabel"]["text_color"][1],
+                            fieldbackground=ctk.ThemeManager.theme["CTkFrame"]["fg_color"][1],
+                            borderwidth=0)
+        treestyle.configure("Treeview.Heading", background=ctk.ThemeManager.theme["CTkFrame"]["fg_color"][1],
+                            foreground=ctk.ThemeManager.theme["CTkLabel"]["text_color"][1],
+                            fieldbackground=ctk.ThemeManager.theme["CTkFrame"]["fg_color"][1],
+                            borderwidth=0)
+        treestyle.map('Treeview',
+                      background=[('selected', ctk.ThemeManager.theme["CTkFrame"]["fg_color"][1])],
+                      foreground=[('selected', ctk.ThemeManager.theme["CTkButton"]["fg_color"][1])])
+        self._img_red = tk.PhotoImage(file='power-off.png')
+        self._img_yellow = tk.PhotoImage(file='warning-sign.png')
+        self._img_green = tk.PhotoImage(file='check.png')
+
+        self.bind("<<TreeviewSelect>>", lambda event: self.focus_set())
+
+        data_columns = ('article', 'amount', 'shortage')
+        self.data_frame = ctk.CTkFrame(self, width=1080)
+        self.data_frame.grid()
+
+        self.data = ttk.Treeview(self.data_frame, columns=data_columns, height=30,
+                                 selectmode='extended', show='tree headings')
+        self.data.grid()
+        self.make_data_table()
+
+        # ----------------------------------EXIT-----------------------------------------------------------------------#
+        exit_button = ctk.CTkButton(self, text='Выход', command=self.app_exit)
+        exit_button.grid()
+
+    def app_exit(self):
+        self.destroy()
+        sys.exit()
+
+    def make_data_table(self, event=None):
+        self.scrollbar = ttk.Scrollbar(self.data_frame, orient=ctk.VERTICAL, command=self.data.yview)
+        self.data.configure(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.grid(row=0, column=1, sticky='ns')
+        self.data.heading('article', text='Артикль')
+        self.data.heading('amount', text='Количество')
+        # self.data.heading('status', text='Статус')
+        self.data.heading('shortage', text='Недостаток')
+
+        if event:
+            for i in self.data.get_children():
+                self.data.delete(i)
+        data_list = []
+        if not os.path.exists(f'data{dateStock}.txt'):
+            self.refresh()
+        else:
+            with open(f'data{dateStock}.txt', 'r') as r:
+                idx = 0
+                for i in r:
+                    data_list.append(i.split(sep=','))
+                    data_list[idx][0] = data_list[idx][0][2:-1]
+                    data_list[idx][1] = int(data_list[idx][1])
+                    data_list[idx][2] = int(data_list[idx][2])
+                    data_list[idx][3] = math.ceil(float(data_list[idx][3][1:-2]))
+                    idx += 1
+
+            status = self.article_status.get()
+            if status == 'Все':
+                for i in data_list:
+                    if i[2] == 0:
+                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
+                    elif i[2] == 1:
+                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
+                    elif i[2] == 2:
+                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
+            elif status == 'Критично':
+                for i in data_list:
+                    if i[2] == 0:
+                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
+            elif status == 'Внимание':
+                for i in data_list:
+                    if i[2] == 1:
+                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
+            elif status == 'Четко':
+                for i in data_list:
+                    if i[2] == 2:
+                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
+            # self.data.tag_configure('red', background='red')
+            # self.data.tag_configure('yellow', background='yellow')
+            # self.data.tag_configure('green', background='green')
+
+    def refresh(self):
+        self.update_refresh_label('Обновление запущено')
+        subprocess.Popen([sys.executable, 'wb_api.py'])
+        print('wb_api started')
+        if not os.path.exists(f'data{dateStock}.txt'):
+            start = time.perf_counter()
+            while time.perf_counter() - start < 70:
+                time.sleep(1)
+                stage = int(time.perf_counter() - start)
+                print(f'Этап {stage}/70')
+
+        self.update_refresh_label('Обновление завершено')
+        self.article_status.set('Все')
+        self.make_data_table(event=1)
+
+    def update_refresh_label(self, text='Обновление запущено'):
+        self.refresh_label.configure(text=text, require_redraw=True)
+
+
+ctk.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
+root = Application()
+
+root.mainloop()
