@@ -7,7 +7,6 @@ import math
 import subprocess
 import time
 import json
-import base64
 
 with open('settings.json', 'r', encoding='utf-8') as settings:
     attributes = json.load(settings)
