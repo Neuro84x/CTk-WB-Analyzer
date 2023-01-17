@@ -37,40 +37,24 @@ class Application(ctk.CTk):
                                               state='readonly', text_color='Black', command=self.make_data_table)
         self.article_status.set('Все')
         self.article_status.grid()
-        # --------------------------------CALENDAR---------------------------------------------------------------------#
-        day = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-               '20', '21', '22', '23', '24', '25', '26', '27',
-               '28', '29', '30', '31']
-
-        month = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-
-        year = ['2021', '2022', '2023']
-
-        self.calendar = ctk.CTkFrame(self)
-        self.calendar.grid()
-
-        self.day_label = ctk.CTkLabel(self.calendar, text='Число')
-        self.day_label.grid(column=0, row=0)
-        self.day = ctk.CTkComboBox(master=self.calendar,
-                                   values=day, state='readonly', justify=ctk.LEFT, text_color='Black')
-        self.day.set('1')
-        self.day.grid(column=0, row=1)
-
-        self.day_label = ctk.CTkLabel(self.calendar, text='Месяц')
-        self.day_label.grid(column=1, row=0)
-        self.month = ctk.CTkComboBox(self.calendar,
-                                     values=month, state='readonly', justify=ctk.CENTER, text_color='Black')
-        self.month.set('1')
-        self.month.grid(column=1, row=1)
-
-        self.day_label = ctk.CTkLabel(self.calendar, text='Год')
-        self.day_label.grid(column=2, row=0)
-        self.year = ctk.CTkComboBox(self.calendar,
-                                    values=year, state='readonly', justify=ctk.RIGHT, text_color='Black')
-        self.year.set('2023')
-        self.year.grid(column=2, row=1)
 
         # ----------------------------------DATA-----------------------------------------------------------------------#
+        self.sort_statuses = ('-', 'v', '^')
+        self.active_sort_status = 0
+
+        self.data_list = []
+        if not os.path.exists(f'data{dateStock}.txt'):
+            self.refresh()
+        else:
+            with open(f'data{dateStock}.txt', 'r') as r:
+                idx = 0
+                for i in r:
+                    self.data_list.append(i.split(sep=','))
+                    self.data_list[idx][0] = self.data_list[idx][0][2:-1]
+                    self.data_list[idx][1] = int(self.data_list[idx][1])
+                    self.data_list[idx][2] = int(self.data_list[idx][2])
+                    self.data_list[idx][3] = math.ceil(float(self.data_list[idx][3][1:-2]))
+                    idx += 1
         treestyle = ttk.Style()
         treestyle.theme_use('default')
         treestyle.configure("Treeview", rowheight=20, background=ctk.ThemeManager.theme["CTkFrame"]["fg_color"][1],
@@ -96,6 +80,16 @@ class Application(ctk.CTk):
 
         self.data = ttk.Treeview(self.data_frame, columns=data_columns, height=30,
                                  selectmode='extended', show='tree headings')
+
+        self.scrollbar = ttk.Scrollbar(self.data_frame, orient=ctk.VERTICAL, command=self.data.yview)
+        self.data.configure(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.grid(row=0, column=1, sticky='ns')
+        self.data.heading('article', text='Артикль')
+        self.data.heading('amount', text='Количество')
+        # self.data.heading('status', text='Статус')
+        self.data.heading('shortage', text='Недостаток -',
+                          command=self.sort_data)
+
         self.data.grid()
         self.make_data_table()
 
@@ -107,53 +101,35 @@ class Application(ctk.CTk):
         self.destroy()
         sys.exit()
 
-    def make_data_table(self, event=None):
-        self.scrollbar = ttk.Scrollbar(self.data_frame, orient=ctk.VERTICAL, command=self.data.yview)
-        self.data.configure(yscrollcommand=self.scrollbar.set)
-        self.scrollbar.grid(row=0, column=1, sticky='ns')
-        self.data.heading('article', text='Артикль')
-        self.data.heading('amount', text='Количество')
-        # self.data.heading('status', text='Статус')
-        self.data.heading('shortage', text='Недостаток')
+    def make_data_table(self, event=None, internal_data_list=[]):
+        if len(internal_data_list) == 0:
+            internal_data_list = self.data_list
 
-        if event:
+        if event in ('Все', 'Критично', 'Внимание', 'Четко'):
             for i in self.data.get_children():
                 self.data.delete(i)
-        data_list = []
-        if not os.path.exists(f'data{dateStock}.txt'):
-            self.refresh()
-        else:
-            with open(f'data{dateStock}.txt', 'r') as r:
-                idx = 0
-                for i in r:
-                    data_list.append(i.split(sep=','))
-                    data_list[idx][0] = data_list[idx][0][2:-1]
-                    data_list[idx][1] = int(data_list[idx][1])
-                    data_list[idx][2] = int(data_list[idx][2])
-                    data_list[idx][3] = math.ceil(float(data_list[idx][3][1:-2]))
-                    idx += 1
 
-            status = self.article_status.get()
-            if status == 'Все':
-                for i in data_list:
-                    if i[2] == 0:
-                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
-                    elif i[2] == 1:
-                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
-                    elif i[2] == 2:
-                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
-            elif status == 'Критично':
-                for i in data_list:
-                    if i[2] == 0:
-                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
-            elif status == 'Внимание':
-                for i in data_list:
-                    if i[2] == 1:
-                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
-            elif status == 'Четко':
-                for i in data_list:
-                    if i[2] == 2:
-                        self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
+        status = self.article_status.get()
+        if status == 'Все':
+            for i in internal_data_list:
+                if i[2] == 0:
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
+                elif i[2] == 1:
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
+                elif i[2] == 2:
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
+        elif status == 'Критично':
+            for i in self.data_list:
+                if i[2] == 0:
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
+        elif status == 'Внимание':
+            for i in self.data_list:
+                if i[2] == 1:
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
+        elif status == 'Четко':
+            for i in self.data_list:
+                if i[2] == 2:
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
             # self.data.tag_configure('red', background='red')
             # self.data.tag_configure('yellow', background='yellow')
             # self.data.tag_configure('green', background='green')
@@ -176,9 +152,29 @@ class Application(ctk.CTk):
     def update_refresh_label(self, text='Обновление запущено'):
         self.refresh_label.configure(text=text, require_redraw=True)
 
+    def sort_col(self, data):
+        return data[3]
+
+    def sort_data(self, event='sort'):
+        if event == 'sort':
+            idl = self.data_list
+            self.active_sort_status += 1
+            print(self.active_sort_status)
+            if self.active_sort_status == 0:
+                self.data.heading('shortage', text=f'Недостаток {self.sort_statuses[self.active_sort_status]}')
+                idl = self.data_list
+            elif self.active_sort_status == 1:
+                self.data.heading('shortage', text=f'Недостаток {self.sort_statuses[self.active_sort_status]}')
+                idl = sorted(self.data_list, key=self.sort_col, reverse=True)
+            else:
+                self.data.heading('shortage', text=f'Недостаток {self.sort_statuses[self.active_sort_status]}')
+                idl = sorted(self.data_list, key=self.sort_col, reverse=False)
+                self.active_sort_status = -1
+            self.make_data_table(event=self.article_status.get(), internal_data_list=idl)
+
 
 ctk.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
+ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 root = Application()
 
 root.mainloop()
