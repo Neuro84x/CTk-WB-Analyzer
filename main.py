@@ -16,7 +16,7 @@ with open('settings.json', 'r', encoding='utf-8') as settings:
 class Application(ctk.CTk):
     def __init__(self):
         ctk.CTk.__init__(self)
-        self.geometry('850x850')
+        self.geometry('1450x850')
         self.title('Аналитика CUTECASELLC')
         self.set_UI()
 
@@ -74,7 +74,7 @@ class Application(ctk.CTk):
 
         self.bind("<<TreeviewSelect>>", lambda event: self.focus_set())
 
-        data_columns = ('article', 'amount', 'shortage')
+        data_columns = ('article', 'amount', 'shortage', 'storage_central', 'storage_south', 'storage_west')
         self.data_frame = ctk.CTkFrame(self, width=1080)
         self.data_frame.grid()
 
@@ -89,9 +89,14 @@ class Application(ctk.CTk):
         # self.data.heading('status', text='Статус')
         self.data.heading('shortage', text='Недостаток -',
                           command=self.sort_data)
+        self.data.heading('storage_central', text='ЦФО')
+        self.data.heading('storage_south', text='Юг')
+        self.data.heading('storage_west', text='Восток')
 
-        self.data.grid()
         self.make_data_table()
+        self.data.grid()
+
+        # ----------------------------------SETTINGS-------------------------------------------------------------------#
 
         # ----------------------------------EXIT-----------------------------------------------------------------------#
         exit_button = ctk.CTkButton(self, text='Выход', command=self.app_exit)
@@ -113,23 +118,49 @@ class Application(ctk.CTk):
         if status == 'Все':
             for i in internal_data_list:
                 if i[2] == 0:
-                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
+                    self.data.insert("", ctk.END,
+                                     values=(i[0], i[1], i[3],
+                                             math.ceil(i[3] / 100 * 50), #ЦФО
+                                             math.ceil(i[3] / 100 * 20), #ЮГ
+                                             math.ceil(i[3] / 100 * 30)  #ВОСТОК
+                                             ),
+                                     tag='red', image=self._img_red)
                 elif i[2] == 1:
-                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3],
+                                             math.ceil(i[3] / 100 * 50), #ЦФО
+                                             math.ceil(i[3] / 100 * 20), #ЮГ
+                                             math.ceil(i[3] / 100 * 30)  #ВОСТОК
+                                             ), tag='yellow', image=self._img_yellow)
                 elif i[2] == 2:
-                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3],
+                                             math.ceil(i[3] / 100 * 50), #ЦФО
+                                             math.ceil(i[3] / 100 * 20), #ЮГ
+                                             math.ceil(i[3] / 100 * 30)  #ВОСТОК
+                                             ), tag='green', image=self._img_green)
         elif status == 'Критично':
             for i in self.data_list:
                 if i[2] == 0:
-                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='red', image=self._img_red)
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3],
+                                             math.ceil(i[3] / 100 * 50), #ЦФО
+                                             math.ceil(i[3] / 100 * 20), #ЮГ
+                                             math.ceil(i[3] / 100 * 30)  #ВОСТОК
+                                             ), tag='red', image=self._img_red)
         elif status == 'Внимание':
             for i in self.data_list:
                 if i[2] == 1:
-                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='yellow', image=self._img_yellow)
+                    self.data.insert("", ctk.END, vvalues=(i[0], i[1], i[3],
+                                             math.ceil(i[3] / 100 * 50), #ЦФО
+                                             math.ceil(i[3] / 100 * 20), #ЮГ
+                                             math.ceil(i[3] / 100 * 30)  #ВОСТОК
+                                             ), tag='yellow', image=self._img_yellow)
         elif status == 'Четко':
             for i in self.data_list:
                 if i[2] == 2:
-                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3]), tag='green', image=self._img_green)
+                    self.data.insert("", ctk.END, values=(i[0], i[1], i[3],
+                                             math.ceil(i[3] / 100 * 50), #ЦФО
+                                             math.ceil(i[3] / 100 * 20), #ЮГ
+                                             math.ceil(i[3] / 100 * 30)  #ВОСТОК
+                                             ), tag='green', image=self._img_green)
             # self.data.tag_configure('red', background='red')
             # self.data.tag_configure('yellow', background='yellow')
             # self.data.tag_configure('green', background='green')
