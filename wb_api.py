@@ -4,11 +4,6 @@ import time
 import requests
 from datetime import datetime
 
-# API_KEY = 'ZDEwOGQ4NmYtZDIzYy00MzhmLWFjMzMtNWY0ZTkzNjI4NmNl'
-# dateFrom = '2022-11-01'
-# dateBefore = '2023-01-07'
-# dateStock = '2023-01-07'
-
 start = datetime.now()
 
 with open('settings.json', 'r', encoding='utf-8') as settings:
